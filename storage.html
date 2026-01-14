@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expense History</title>
+<style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f8f9fa; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }
+    .header { background: #6366f1; color: white; padding: 24px; text-align: center; }
+    .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+    .header p { margin: 5px 0 0; font-weight: 400; }
+    .filter { padding: 24px; border-bottom: 1px solid #e5e7eb; }
+    .filter-label { display: block; margin-bottom: 8px; font-weight: 500; color: #374151; }
+    .date-input { width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px; background: white; }
+    .expenses-section { padding: 24px; }
+    .section-title { font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid #f3f4f6; }
+    th { font-weight: 600; color: #374151; }
+    .category { color: #059669; font-weight: 500; }
+    .amount { font-weight: 600; color: #dc2626; text-align: right; }
+    .total-row { background: #f9fafb; font-weight: 600; }
+    .category-totals { background: #f8fafc; padding: 20px; border-top: 1px solid #e5e7eb; border-radius: 8px; }
+    .cat-table th, .cat-table td { padding: 12px; }
+    .cat-icon { width: 20px; height: 20px; background: #10b981; border-radius: 4px; display: inline-block; margin-right: 8px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Expense History</h1>
+        <p>View your past expenses by date</p>
+    </div>
+
+    <div class="filter">
+        <label class="filter-label">View expenses by date</label>
+        <input type="date" id="dateFilter" class="date-input">
+    </div>
+
+    <div class="expenses-section">
+        <h2 class="section-title" id="expensesTitle">Expenses</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody id="expensesTable">
+                <!-- Populated by JS -->
+            </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td>Total</td>
+                    <td></td>
+                    <td class="amount" id="totalAmount">₹0</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="category-totals">
+            <h3 class="section-title">Category Totals</h3>
+            <table class="cat-table" id="categoryTotalsTable">
+                <!-- Populated by JS -->
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Set today's date as default
+    const dateFilter = document.getElementById('dateFilter');
+    const today = new Date().toISOString().split("T")[0];
+    dateFilter.value = today;
+
+    const expensesTable = document.getElementById('expensesTable');
+    const expensesTitle = document.getElementById('expensesTitle');
+    const totalAmountElem = document.getElementById('totalAmount');
+    const categoryTotalsTable = document.getElementById('categoryTotalsTable');
+
+    // Function to render expenses for a given date
+    function renderExpenses(date) {
+        const allExpenses = JSON.parse(localStorage.getItem('expenses')) || [];
+        const filtered = allExpenses.filter(exp => exp.date === date);
+
+        expensesTable.innerHTML = '';
+        categoryTotalsTable.innerHTML = '';
+        let total = 0;
+        const categoryTotals = {};
+
+        filtered.forEach(exp => {
+            total += exp.amount;
+
+            // Update table
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${exp.title}</td>
+                <td class="category">${exp.category}</td>
+                <td class="amount">₹${exp.amount}</td>
+            `;
+            expensesTable.appendChild(row);
+
+            // Update category totals
+            if(categoryTotals[exp.category]) {
+                categoryTotals[exp.category] += exp.amount;
+            } else {
+                categoryTotals[exp.category] = exp.amount;
+            }
+        });
+
+        // Update totals
+        totalAmountElem.textContent = `₹${total}`;
+
+        // Update title
+        const dateObj = new Date(date);
+        expensesTitle.textContent = filtered.length > 0
+            ? `Expenses on ${dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`
+            : `No expenses on ${dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+
+        // Update category totals table
+        for(const [cat, amt] of Object.entries(categoryTotals)) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td><span class="cat-icon"></span>${cat}</td><td class="amount">₹${amt}</td>`;
+            categoryTotalsTable.appendChild(tr);
+        }
+        if(Object.keys(categoryTotals).length === 0){
+            categoryTotalsTable.innerHTML = '<tr><td colspan="2" style="text-align:center;">No expenses</td></tr>';
+        }
+    }
+
+    // Event listener
+    dateFilter.addEventListener('change', (e) => renderExpenses(e.target.value));
+
+    // Initial render
+    renderExpenses(today);
+</script>
+
+</body>
+</html>
